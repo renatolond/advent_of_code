@@ -13,7 +13,8 @@ struct Planet {
 fn main() {
     let mut planets : Vec<Planet> = Vec::new();
     let mut max_orbiters = 0;
-    let mut start : usize = 999;
+    let mut start : usize = 99999;
+    let mut end : usize = 99999;
     for line in io::stdin().lock().lines() {
         let line_str: String = line.unwrap();
         let orbit_desc : Vec<&str>  = line_str.split(')').collect();
@@ -47,64 +48,54 @@ fn main() {
             if planet_center_s.orbiters.len() > max_orbiters {
                 max_orbiters = planet_center_s.orbiters.len();
             }
-
-            if planet_center_s.name == "COM" {
-                start = planet_center_idx.unwrap();
-            }
         }
         {
             let ref mut planet_orbiter_s : Planet;
             planet_orbiter_s = &mut planets[planet_orbiter_idx.unwrap()];
             planet_orbiter_s.orbiting = planet_center_idx;
+            if planet_orbiter_s.name == "YOU" {
+                start = planet_orbiter_idx.unwrap();
+            }
+            if planet_orbiter_s.name == "SAN" {
+                end = planet_orbiter_idx.unwrap();
+            }
         }
     }
     let mut visited = vec![false; planets.len()];
 
-    let mut curr_idx = start;
-    let mut to_visit : VecDeque<usize> = VecDeque::new();
+    let mut curr_state : (usize, i32) = (start, 0);
+    let mut to_visit : VecDeque<(usize, i32)> = VecDeque::new();
     loop {
-        if visited[curr_idx] {
-            println!("Oh noes.");
-            process::exit(1)
+        let (curr_idx, jumps) = curr_state;
+        if curr_idx == end {
+            break
         }
         println!("Looking at {}", planets[curr_idx].name);
-        let accum;
-        match planets[curr_idx].orbiting {
-            Some(idx) => { accum = planets[idx].accum + 1}
-            None => { accum = 0 }
-        }
 
         {
             let ref mut curr_planet : Planet = planets[curr_idx];
+            if curr_planet.orbiting != None {
+                if !visited[curr_planet.orbiting.unwrap()] {
+                    to_visit.push_back((curr_planet.orbiting.unwrap(), jumps+1));
+                }
+            }
             for i in curr_planet.orbiters.iter() {
-                to_visit.push_back(*i);
+                if !visited[*i] {
+                    to_visit.push_back((*i, jumps+1));
+                }
             }
 
-            curr_planet.accum = accum;
         }
         visited[curr_idx] = true;
 
         if to_visit.is_empty() {
             break
         }
-        curr_idx = to_visit.pop_front().unwrap();
+        curr_state = to_visit.pop_front().unwrap();
     }
 
-    let mut orbits = 0;
-    for i in 0..planets.len() {
-        orbits += planets[i].accum;
-        println!("{} {}", planets[i].name, planets[i].accum);
+    {
+        let (curr_idx, jumps) = curr_state;
+        println!("{}", jumps - 2);
     }
-
-    println!("{}", orbits);
-    //    let none = "NONE".to_string();
-    //    let ref planet;
-    //    if orbits[i] == -1 {
-    //        planet = &none;
-    //    } else {
-    //        planet = &planets[orbits[i] as usize];
-    //    }
-    //    println!("{}: {} {}", planets[i], planet, pointing[i]);
-    //}
-    //println!("{}", planets.len());
 }
