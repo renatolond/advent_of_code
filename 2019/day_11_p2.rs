@@ -28,13 +28,18 @@ macro_rules! result_expr {
 
 const MAX_PROGRAM: usize = 5000;
 static mut PROGRAM : [i64; MAX_PROGRAM] = [0; MAX_PROGRAM];
-unsafe fn machine(mut input: Option<i64>, instruction_pointer : Option<usize>, total_instructions: usize) -> (Option<i64>,Option<usize>) {
+unsafe fn machine(mut input: Option<i64>, instruction_pointer : Option<usize>, total_instructions: usize, pos_pointer: Option<usize>) -> (Option<i64>,Option<usize>,Option<usize>) {
     let mut i : usize;
-    let mut pos_mode_ptr = 0;
+    let mut pos_mode_ptr;
 
     match instruction_pointer {
         None => { i = 0; },
         Some(x) => { i = x; }
+    }
+
+    match pos_pointer {
+        None => { pos_mode_ptr = 0; },
+        Some(x) => { pos_mode_ptr = x; }
     }
 
     //println!("starting machine {} with input {:?}, ptr at {}", prg_idx, input, i);
@@ -69,7 +74,7 @@ unsafe fn machine(mut input: Option<i64>, instruction_pointer : Option<usize>, t
             3 => { // Input OP
                 let input_number;
                 if input == None {
-                    return (None, Some(i));
+                    return (None, Some(i), Some(pos_mode_ptr));
                 } else {
                     input_number = input.unwrap();
                     input = None;
@@ -89,7 +94,7 @@ unsafe fn machine(mut input: Option<i64>, instruction_pointer : Option<usize>, t
                 machine_param!(modes.0, PROGRAM, output, pos_mode_ptr, i+1);
                 i += 2;
                 //println!("{:?}", output);
-                return (Some(output), Some(i));
+                return (Some(output), Some(i), Some(pos_mode_ptr));
             }
             5 => { // Jump-if-true
                 let first_number;
@@ -156,7 +161,7 @@ unsafe fn machine(mut input: Option<i64>, instruction_pointer : Option<usize>, t
             _ => { println!("NOT REGISTERED OP!! {}", PROGRAM[i]); process::exit(1)}
         }
     }
-    return (None, None);
+    return (None, None,None);
 }
 
 fn trigo_transform(angle : f64) -> (i64, i64) {
@@ -183,13 +188,16 @@ unsafe fn real_main() {
     }
 
     let mut robot_pos = (HULL_DIMENSIONS / 2, HULL_DIMENSIONS / 2);
+    hull[robot_pos.0][robot_pos.1] = true;
     let mut facing = std::f64::consts::PI/2.0; // Up!
     let mut robot_mov;
     let mut instruction_pointer : Option<usize> = None;
+    let mut pos_pointer : Option<usize> = None;
     loop {
         // Get color to paint
-        let color_ret = machine(Some(hull[robot_pos.0][robot_pos.1].try_into().unwrap()), instruction_pointer, total_instructions);
+        let color_ret = machine(Some(hull[robot_pos.0][robot_pos.1].try_into().unwrap()), instruction_pointer, total_instructions, pos_pointer);
         instruction_pointer = color_ret.1;
+        pos_pointer = color_ret.2;
         let hull_color = color_ret.0;
 
         if instruction_pointer == None {
@@ -198,8 +206,9 @@ unsafe fn real_main() {
         hull[robot_pos.0][robot_pos.1] = hull_color.unwrap() == 1;
         painted[robot_pos.0][robot_pos.1] = true;
 
-        let move_ret = machine(Some(hull[robot_pos.0][robot_pos.1].try_into().unwrap()), instruction_pointer, total_instructions);
+        let move_ret = machine(Some(hull[robot_pos.0][robot_pos.1].try_into().unwrap()), instruction_pointer, total_instructions, pos_pointer);
         instruction_pointer = move_ret.1;
+        pos_pointer = move_ret.2;
         if instruction_pointer == None {
             break
         }
@@ -226,18 +235,25 @@ unsafe fn real_main() {
     }
 
     let mut panels = 0;
-    for i in 0..HULL_DIMENSIONS {
-        for j in 0..HULL_DIMENSIONS {
-            if painted[i][j] == true {
-                panels += 1;
-            }
-            if hull[i][j] == true {
+    let mut i : i32 = HULL_DIMENSIONS as i32 - 1;
+    loop {
+        let mut j : i32 = 0;
+        loop {
+            if hull[i as usize][j as usize] == true {
                 print!("#");
             } else {
                 print!(".");
             }
+            j += 1;
+            if j >= HULL_DIMENSIONS as i32 {
+                break
+            }
         }
         println!("");
+        i -= 1;
+        if i < 0 {
+            break
+        }
     }
 
     println!("{}",panels);
