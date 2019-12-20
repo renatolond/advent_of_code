@@ -21,10 +21,101 @@ struct Equation {
     right_side: Vec<Material>,
 }
 
-fn main() {
-    let mut equations : Vec<Equation> = Vec::new();
+static mut EQUATIONS : Vec<Equation> = Vec::new();
+static mut ORE_EQUATIONS : Vec<usize> = Vec::new();
+
+static mut BASE_MATERIALS : Vec<String> = Vec::new();
+
+static mut equation_queue : Vec<usize> = Vec::new();
+
+unsafe fn reduce_equation(main_equation_idx : usize, ignore_ores : bool) {
+    // Step 1: Convert all non-ORE elements into ORE elements
+    let mut element_idx = 0;
+    loop {
+        println!("Looking at #{} : {:?}", element_idx, EQUATIONS[main_equation_idx].left_side[element_idx]);
+        if element_idx >= EQUATIONS[main_equation_idx].left_side.len() {
+            break;
+        }
+
+        if EQUATIONS[main_equation_idx].left_side[element_idx].name == "ORE" {
+            println!("panic?");
+            process::exit(2);
+        }
+
+        if EQUATIONS[main_equation_idx].left_side.len() == ORE_EQUATIONS.len() {
+            println!("Same elements as the ore EQUATIONS, lets see if we're good");
+            // we have to then check if all the right side is only the ore outputs
+            let mut reduced_equation = true;
+            for element in EQUATIONS[main_equation_idx].left_side.iter() {
+                println!("{:?}", element);
+                if !BASE_MATERIALS.contains(&element.name) {
+                    reduced_equation = false;
+                    break;
+                }
+            }
+            if reduced_equation {
+                println!("Seems like it's well reduced, let's get out");
+                break;
+            }
+        }
+
+        let mut next_idx = None;
+        for equation_idx in 0..EQUATIONS.len() {
+            if equation_idx == main_equation_idx || (ignore_ores && ORE_EQUATIONS.contains(&equation_idx)) {
+                continue;
+            }
+            if EQUATIONS[main_equation_idx].left_side[element_idx].name == EQUATIONS[equation_idx].right_side[0].name {
+                next_idx = Some(equation_idx);
+                break;
+            }
+        }
+
+        if next_idx == None { // This is an ore element, skip it
+            println!("Ore element #{}, skipping it!", EQUATIONS[main_equation_idx].left_side[element_idx].name);
+            element_idx += 1;
+            continue;
+        }
+
+
+        {
+            let equation_idx = next_idx.unwrap();
+            let mut material : Material;
+            let mut main_equation = &mut EQUATIONS[main_equation_idx];
+            println!("#{}",element_idx);
+            material = main_equation.left_side.remove(element_idx);
+            let multiplier;
+            if material.quantity % EQUATIONS[equation_idx].right_side[0].quantity != 0 {
+                println!("Equation {} needs to be reduced!", equation_idx);
+                equation_queue.push(equation_idx);
+                continue;
+            } else {
+                multiplier = material.quantity / EQUATIONS[equation_idx].right_side[0].quantity;
+            }
+            println!("Chose {} * {}", material.name, multiplier);
+            assert_eq!(material.quantity % EQUATIONS[equation_idx].right_side[0].quantity, 0);
+            for element in EQUATIONS[equation_idx].left_side.iter() {
+                if main_equation.left_side.contains(&element) {
+                    for el in main_equation.left_side.iter_mut() {
+                        if el.name == element.name {
+                            el.quantity += element.quantity * multiplier;
+                            break;
+                        }
+                    }
+                } else {
+                    main_equation.left_side.push( Material { name: element.name.clone(), quantity: element.quantity * multiplier } );
+                }
+            }
+
+        }
+        for element in EQUATIONS[main_equation_idx].left_side.iter() {
+            println!("{:?}", element);
+        }
+        println!("Ore equations: {}", ORE_EQUATIONS.len());
+    }
+}
+
+unsafe fn real_main() {
     let mut fuel_equation_idx = 9999999;
-    let mut ore_equations = Vec::new();
     for line in io::stdin().lock().lines() {
         let line_str: String = line.unwrap();
         let parts : Vec<&str> = line_str.split(" => ").collect();
@@ -54,94 +145,58 @@ fn main() {
             right.push(Material { name: name, quantity: qty });
         }
         if is_ore_equation {
-            ore_equations.push(equations.len());
+            ORE_EQUATIONS.push(EQUATIONS.len());
         }
         if is_fuel_equation {
-            fuel_equation_idx = equations.len();
+            fuel_equation_idx = EQUATIONS.len();
         }
 
-        equations.push(Equation { left_side: left, right_side: right });
+        EQUATIONS.push(Equation { left_side: left, right_side: right });
     }
 
-    let mut base_materials = HashSet::new();
-
-    for equation_idx in ore_equations.iter() {
-        assert_eq!(equations[*equation_idx].right_side.len(), 1);
-        base_materials.insert(equations[*equation_idx].right_side[0].name.clone());
+    for equation_idx in ORE_EQUATIONS.iter() {
+        assert_eq!(EQUATIONS[*equation_idx].right_side.len(), 1);
+        BASE_MATERIALS.push(EQUATIONS[*equation_idx].right_side[0].name.clone());
     }
 
-    // Step 1: Convert all non-ORE elements into ORE elements
-    let mut element_idx = 0;
-    loop {
-        if element_idx > equations[fuel_equation_idx].left_side.len() {
-            break;
-        }
-
-        if equations[fuel_equation_idx].left_side[element_idx].name == "ORE" {
-            element_idx += 1;
-        }
-
-        if equations[fuel_equation_idx].left_side.len() == ore_equations.len() {
-            println!("Same elements as the ore equations, lets see if we're good");
-            // we have to then check if all the right side is only the ore outputs
-            let mut reduced_equation = true;
-            for element in equations[fuel_equation_idx].left_side.iter() {
-                if !base_materials.contains(&element.name) {
-                    reduced_equation = false;
-                    break;
-                }
-            }
-            if reduced_equation {
-                println!("Seems like it's well reduced, let's get out");
-                break;
-            }
-        }
-
-        let mut next_idx = None;
-        for equation_idx in 0..equations.len() {
-            if equation_idx == fuel_equation_idx || ore_equations.contains(&equation_idx) {
-                continue;
-            }
-            if equations[fuel_equation_idx].left_side[element_idx].name == equations[equation_idx].right_side[0].name {
-                next_idx = Some(equation_idx);
-                break;
-            }
-        }
-
-        if next_idx == None { // This is an ore element, skip it
-            println!("Ore element, skipping it!");
-            element_idx += 1;
-            continue;
-        }
-
-
-        {
-            let equation_idx = next_idx.unwrap();
-            let mut material : Material;
-            let mut fuel_equation = equations.remove(fuel_equation_idx);
-            material = fuel_equation.left_side.remove(element_idx);
-            println!("Chose {}", material.name);
-            assert_eq!(material.quantity % equations[equation_idx].right_side[0].quantity, 0);
-            for element in equations[equation_idx].left_side.iter() {
-                if fuel_equation.left_side.contains(&element) {
-                    for el in fuel_equation.left_side.iter_mut() {
-                        if el.name == element.name {
-                            el.quantity += element.quantity;
-                            break;
-                        }
-                    }
-                } else {
-                    fuel_equation.left_side.push( Material { name: element.name.clone(), quantity: element.quantity } );
-                }
-            }
-
-            for element in fuel_equation.left_side.iter() {
-                println!("{:?}", element);
-            }
-            fuel_equation_idx = equations.len();
-            equations.push(fuel_equation);
-        }
+    reduce_equation(fuel_equation_idx, true);
+    while equation_queue.len() > 0 {
+        let equation_idx = equation_queue.remove(0);
+        println!("Reducing equation {}", equation_idx);
+        reduce_equation(equation_idx, false);
     }
 
     println!("Fuel equation seems reduced. Let's move forward");
+
+    for ore_equation_idx in ORE_EQUATIONS.iter() {
+        let ore_equation = &EQUATIONS[*ore_equation_idx];
+        for element in ore_equation.left_side.iter() {
+            print!("{:?} ", element);
+        }
+        println!("= {:?}", ore_equation.right_side[0]);
+    }
+
+
+    let mut ore_quantity = 0;
+    for element in EQUATIONS[fuel_equation_idx].left_side.iter() {
+        let mut found = false;
+        for ore_equation_idx in ORE_EQUATIONS.iter() {
+            if element.name == EQUATIONS[*ore_equation_idx].right_side[0].name {
+                let multiplier =  (element.quantity as f32 / EQUATIONS[*ore_equation_idx].right_side[0].quantity as f32).ceil() as i32;
+                println!("{} {} {}", element.quantity, EQUATIONS[*ore_equation_idx].right_side[0].quantity, (element.quantity as f64 / EQUATIONS[*ore_equation_idx].right_side[0].quantity as f64).ceil() as i64);
+                ore_quantity += EQUATIONS[*ore_equation_idx].left_side[0].quantity * multiplier;
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            println!("Could not find {}", element.name);
+            process::exit(1);
+        }
+    }
+    println!("{}", ore_quantity);
+}
+
+fn main() {
+    unsafe { real_main() }
 }
