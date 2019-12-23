@@ -48,17 +48,12 @@ fn main() {
     let mut steps = 0;
     loop {
         // serialize state
-        let mut state = Vec::new();
+        let mut state = "".to_string();
         for moon_idx in 0..4 {
-            state.append(&mut moons[moon_idx].pos.x.to_ne_bytes().to_vec());
-            state.append(&mut moons[moon_idx].pos.y.to_ne_bytes().to_vec());
-            state.append(&mut moons[moon_idx].pos.z.to_ne_bytes().to_vec());
-            state.append(&mut moons[moon_idx].velocity.x.to_ne_bytes().to_vec());
-            state.append(&mut moons[moon_idx].velocity.y.to_ne_bytes().to_vec());
-            state.append(&mut moons[moon_idx].velocity.z.to_ne_bytes().to_vec());
+            state = format!("{}|{},{}",state,moons[moon_idx].pos.x,moons[moon_idx].velocity.x);
         }
         if previous_steps.contains(&state) {
-            println!("Stop! Universe reset in step {}", steps);
+            println!("Stop! Universe x reset in step {} : {}", steps, state);
             break;
         }
         previous_steps.insert(state);
@@ -77,14 +72,68 @@ fn main() {
                     moons[moon_idx].velocity.x += 1;
                     moons[other_moon_idx].velocity.x -= 1;
                 }
+            }
+        }
 
-                // Y
+        for moon_idx in 0..4 {
+            moons[moon_idx].pos.x += moons[moon_idx].velocity.x;
+        }
+        steps += 1;
+    }
+    steps = 0;
+    previous_steps = HashSet::new();
+    loop {
+        // serialize state
+        let mut state = "".to_string();
+        for moon_idx in 0..4 {
+            state = format!("{}|{},{}",state,moons[moon_idx].pos.y,moons[moon_idx].velocity.y);
+        }
+        if previous_steps.contains(&state) {
+            println!("Stop! Universe y reset in step {} : {}", steps, state);
+            break;
+        }
+        previous_steps.insert(state);
+
+        for moon_idx in 0..4 {
+            for other_moon_idx in moon_idx+1..4 {
+                if moon_idx == other_moon_idx {
+                    continue
+                }
+
+                // X
                 if moons[moon_idx].pos.y > moons[other_moon_idx].pos.y {
                     moons[moon_idx].velocity.y -= 1;
                     moons[other_moon_idx].velocity.y += 1;
                 } else if moons[moon_idx].pos.y < moons[other_moon_idx].pos.y {
                     moons[moon_idx].velocity.y += 1;
                     moons[other_moon_idx].velocity.y -= 1;
+                }
+            }
+        }
+
+        for moon_idx in 0..4 {
+            moons[moon_idx].pos.y += moons[moon_idx].velocity.y;
+        }
+        steps += 1;
+    }
+    steps = 0;
+    previous_steps = HashSet::new();
+    loop {
+        // serialize state
+        let mut state = "".to_string();
+        for moon_idx in 0..4 {
+            state = format!("{}|{},{}",state,moons[moon_idx].pos.z,moons[moon_idx].velocity.z);
+        }
+        if previous_steps.contains(&state) {
+            println!("Stop! Universe z reset in step {} : {}", steps, state);
+            break;
+        }
+        previous_steps.insert(state);
+
+        for moon_idx in 0..4 {
+            for other_moon_idx in moon_idx+1..4 {
+                if moon_idx == other_moon_idx {
+                    continue
                 }
 
                 // Z
@@ -97,19 +146,9 @@ fn main() {
                 }
             }
         }
-
-        let mut total_energy = 0;
-
         for moon_idx in 0..4 {
-            moons[moon_idx].pos.x += moons[moon_idx].velocity.x;
-            moons[moon_idx].pos.y += moons[moon_idx].velocity.y;
             moons[moon_idx].pos.z += moons[moon_idx].velocity.z;
-
-            moons[moon_idx].energy = (moons[moon_idx].pos.x.abs() + moons[moon_idx].pos.y.abs() + moons[moon_idx].pos.z.abs())*
-                 (moons[moon_idx].velocity.x.abs() + moons[moon_idx].velocity.y.abs() + moons[moon_idx].velocity.z.abs());
-            total_energy += moons[moon_idx].energy;
         }
-
         steps += 1;
     }
 }
