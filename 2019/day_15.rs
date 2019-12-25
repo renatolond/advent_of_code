@@ -2,7 +2,6 @@ use std::process;
 use std::io;
 use std::io::prelude::*;
 use std::convert::TryInto;
-use std::f64;
 
 macro_rules! machine_param {
     ( $mode_var:expr, $program_var:expr, $dest_var:expr, $pos_mode_var:expr, $idx:expr ) => {
@@ -189,7 +188,7 @@ unsafe fn print_maze(pos_x : usize, pos_y : usize) {
 unsafe fn real_main() {
     let mut instruction_pointer : Option<usize> = None;
     let mut pos_pointer : Option<usize> = None;
-    let mut input = None;
+    let mut input;
     let total_instructions = MAX_PROGRAM;
     let stdin = io::stdin();
     let mut lines_iter = stdin.lock().lines();
@@ -197,7 +196,7 @@ unsafe fn real_main() {
     let mut pos_y : i32;
     pos_x = (MAX_SIZE / 2) as i32;
     pos_y = (MAX_SIZE / 2) as i32;
-    MAZE[pos_x as usize][pos_y as usize] = '.';
+    MAZE[pos_x as usize][pos_y as usize] = 'S';
     print_maze(pos_x.try_into().unwrap(), pos_y.try_into().unwrap());
     loop {
         {
@@ -214,8 +213,8 @@ unsafe fn real_main() {
                 }
             }
         }
-        let mut dir_x : i32;
-        let mut dir_y : i32;
+        let dir_x : i32;
+        let dir_y : i32;
         match input {
             Some(1) => { dir_x = 0; dir_y = 1; } // NORTH
             Some(2) => { dir_x = 0; dir_y = -1; } // SOUTH
@@ -233,7 +232,7 @@ unsafe fn real_main() {
         match response.unwrap() {
             WALL => { MAZE[(pos_x + dir_x) as usize][(pos_y + dir_y) as usize] = '#' }
             MOVED => { MAZE[(pos_x + dir_x) as usize][(pos_y + dir_y) as usize] = '.'; pos_x += dir_x; pos_y += dir_y; }
-            FOUND_SYSTEM => { println!("YAY!"); process::exit(4) }
+            FOUND_SYSTEM => { MAZE[(pos_x + dir_x) as usize][(pos_y + dir_y) as usize] = 'O'; pos_x += dir_x; pos_y += dir_y; }
             _ => { println!("unknown id"); process::exit(1) }
         }
 
