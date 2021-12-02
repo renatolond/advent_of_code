@@ -1,0 +1,10 @@
+version: 2.0
+shards:
+  mocks:
+    git: https://github.com/odinhb/mocks.cr.git
+    version: 0.9.6+git.commit.e8e84e3fd6354eeaab2f2cd62cd24c5753b7fc8f
+
+  singleton:
+    git: https://github.com/waterlink/singleton.cr.git
+    version: 1.0.0
+
