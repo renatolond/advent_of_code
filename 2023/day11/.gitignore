@@ -1,0 +1,45 @@
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/spec/examples.txt
+/test/tmp/
+/test/version_tmp/
+/tmp/
+/log
+*.DS_Store
+
+# Used by dotenv library to load environment variables.
+.env
+.env.*
+!.env.template
+!.env.test
+
+# Ignore Byebug command history file.
+.byebug_history
+
+## Specific to vscode:
+/.vscode/
+.rest
+
+## Documentation cache and generated files:
+/.yardoc/
+/_yardoc/
+/doc/
+/rdoc/
+
+## Environment normalization:
+/.bundle/
+/vendor/bundle
+/lib/bundler/man/
+
+# unless supporting rvm < 1.11.0 or doing something fancy, ignore this:
+.rvmrc
+
+# Used by RuboCop. Remote config files pulled in from inherit_from directive.
+.rubocop-https?--*
+
+full.in
