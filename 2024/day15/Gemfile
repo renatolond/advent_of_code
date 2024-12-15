@@ -1,0 +1,18 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby file: ".ruby-version"
+
+gem "debug"
+
+gem "minitest"
+
+gem "tty-cursor"
+
+gem "rubocop-minitest"
+gem "rubocop-performance"
+gem "rubocop-rake"
+gem "rubocop-yard"
+
+gem "rake"
